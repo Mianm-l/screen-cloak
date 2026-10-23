@@ -104,20 +104,25 @@ ScreenCloak 专为解决主讲人“看不清自己写的代码”设计了两�
 
 ---
 
-## 🚀 快速开始 (Windows)
+## 🚀 快速开始 (Windows 静默无黑框运行)
 
-### 方式一：双击直接运行 (免黑框)
+ScreenCloak 专为 Windows 做了全套**静默后台启动优化**，绝不残留多余的黑框终端：
 
-克隆项目后，直接双击 `start.bat` 即可静默唤起顶部悬浮控制胶囊！
+### 方式一：双击一键静默启动（推荐）
+* 直接双击 **`start.bat`** 或 **`start_silent.vbs`**；
+* 通过 Windows 脚本引擎直接唤起，**0.0 秒纯静默，无任何黑色控制台窗口闪烁**！
 
-### 方式二：命令行运行
+### 方式二：双击 `main.pyw`
+* Windows 原生将 `.pyw` 后缀绑定为无黑框 Python GUI 解释器，双击即可无窗口运行。
 
+### 方式三：命令行启动
 ```bash
 git clone https://github.com/Mianm-l/screen-cloak.git
 cd screen-cloak
 
 python main.py
 ```
+> 注：即便在命令行运行 `python main.py`，程序也会通过 Windows API 自动将外部黑框隐藏！
 
 ---
 

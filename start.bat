@@ -1,3 +1,4 @@
 @echo off
-start pythonw main.py
+cd /d "%~dp0"
+start "" wscript.exe "%~dp0start_silent.vbs"
 exit
