@@ -22,7 +22,7 @@ class ScreenCloakApp:
 
         # Place Dock near top center of screen
         screen_w = self.root.winfo_screenwidth()
-        dock_w = 460
+        dock_w = 560
         dock_h = 42
         dock_x = (screen_w - dock_w) // 2
         dock_y = 24
@@ -31,8 +31,10 @@ class ScreenCloakApp:
         self.masks: List[PrivacyMask] = []
         self.mask_counter = 1
         self.is_locked = False
+        self.is_peeking = False
         self.all_visible = True
-        self.current_style = "redacted"  # "redacted", "warning", "pure_black"
+        self.current_style = "redacted"
+        self.current_alpha = 1.0  # 1.0 (100%), 0.85 (85%), 0.70 (70%)
 
         self.presets = load_presets()
 
@@ -77,6 +79,24 @@ class ScreenCloakApp:
             command=self.toggle_lock
         )
         self.status_btn.pack(side=tk.LEFT, padx=3)
+
+        # Peek Button (Quick Translucent View)
+        self.peek_btn = tk.Button(
+            self.dock_frame, text="👁️ 偷瞄", bg="#27272a", fg=fg_text,
+            activebackground="#0284c7", activeforeground="#ffffff",
+            font=("Segoe UI", 8, "bold"), relief=tk.FLAT, padx=6, pady=1,
+            command=self.toggle_peek
+        )
+        self.peek_btn.pack(side=tk.LEFT, padx=3)
+
+        # Alpha Cycle Button (Opacity Level)
+        self.alpha_btn = tk.Button(
+            self.dock_frame, text="🌓 100%", bg="#27272a", fg=fg_text,
+            activebackground="#3f3f46", activeforeground=fg_text,
+            font=("Segoe UI", 8), relief=tk.FLAT, padx=5, pady=1,
+            command=self.cycle_alpha
+        )
+        self.alpha_btn.pack(side=tk.LEFT, padx=3)
 
         # Quick Add Button
         self.add_btn = tk.Button(
@@ -136,6 +156,8 @@ class ScreenCloakApp:
         self.hotkey_mgr = GlobalHotkeyManager()
         # Ctrl+Alt+C: Toggle Lock / Pass-Through
         self.hotkey_mgr.register(MOD_CONTROL | MOD_ALT, 0x43, lambda: self.root.after(0, self.toggle_lock))
+        # Ctrl+Alt+V: Toggle Peek (Quick Translucent View of Code)
+        self.hotkey_mgr.register(MOD_CONTROL | MOD_ALT, 0x56, lambda: self.root.after(0, self.toggle_peek))
         # Ctrl+Alt+N: New Mask
         self.hotkey_mgr.register(MOD_CONTROL | MOD_ALT, 0x4E, lambda: self.root.after(0, self.quick_add_mask))
         # Ctrl+Alt+H: Toggle Visibility
@@ -180,6 +202,39 @@ class ScreenCloakApp:
 
         for m in self.masks:
             m.set_locked(self.is_locked)
+
+    def toggle_peek(self):
+        """
+        Toggles temporary translucency so user can peek at what is underneath.
+        """
+        self.is_peeking = not self.is_peeking
+        if self.is_peeking:
+            self.peek_btn.configure(text="👁️ 偷瞄中", bg="#0284c7", fg="#ffffff")
+        else:
+            self.peek_btn.configure(text="👁️ 偷瞄", bg="#27272a", fg="#f4f4f5")
+
+        for m in self.masks:
+            m.set_peeking(self.is_peeking)
+
+    def cycle_alpha(self):
+        """
+        Cycles base opacity: 100% -> 85% -> 70%
+        85% allows the presenter to see their code on high-res screen,
+        while Zoom/Tencent Meeting video compression crushes it into an illegible dark block!
+        """
+        alpha_levels = [(1.0, "🌓 100%"), (0.85, "🌓 85%"), (0.70, "🌓 70%")]
+        current_idx = 0
+        for i, (val, _) in enumerate(alpha_levels):
+            if abs(self.current_alpha - val) < 0.01:
+                current_idx = i
+                break
+
+        next_idx = (current_idx + 1) % len(alpha_levels)
+        self.current_alpha, label = alpha_levels[next_idx]
+        self.alpha_btn.configure(text=label)
+
+        for m in self.masks:
+            m.set_alpha(self.current_alpha)
 
     def show_style_menu(self):
         """

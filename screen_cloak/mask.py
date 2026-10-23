@@ -35,11 +35,14 @@ class PrivacyMask:
 
         self.is_locked = False
         self.is_visible = True
+        self.is_peeking = False
+        self.base_alpha = 1.0
 
         # Create TopLevel window
         self.win = tk.Toplevel(master)
         self.win.overrideredirect(True)
         self.win.wm_attributes("-topmost", True)
+        self.win.wm_attributes("-alpha", self.base_alpha)
         self.win.geometry(f"{width}x{height}+{x}+{y}")
 
         # Drag & Resize tracking
@@ -173,12 +176,31 @@ class PrivacyMask:
 
             self.canvas.itemconfigure(self.header_text_id, state="hidden")
 
+            if self.is_peeking:
+                banner_text = f"👁️ [ PEEING • 临时透视中 • {self.label_text.upper()} ]"
+                text_color = "#38bdf8"
+                border_color = "#0284c7"
+
             self.canvas.coords(self.center_text_id, w // 2, h // 2)
             self.canvas.itemconfigure(
                 self.center_text_id,
                 text=banner_text, fill=text_color,
                 font=("Consolas", 10, "bold"), state="normal"
             )
+
+    def set_alpha(self, alpha: float):
+        self.base_alpha = alpha
+        if not self.is_peeking:
+            self.win.wm_attributes("-alpha", alpha)
+
+    def set_peeking(self, peeking: bool):
+        self.is_peeking = peeking
+        if peeking:
+            # 20% alpha -> text underneath is clearly readable!
+            self.win.wm_attributes("-alpha", 0.20)
+        else:
+            self.win.wm_attributes("-alpha", self.base_alpha)
+        self._render_content()
 
     def _on_window_configure(self, event):
         if event.widget == self.win:
