@@ -15,18 +15,20 @@ from .presets import load_presets, save_presets
 
 class ScreenCloakApp:
     def __init__(self):
+        # Enable High-DPI scaling awareness on Windows
+        if sys.platform == "win32":
+            try:
+                ctypes.windll.shcore.SetProcessDpiAwareness(1)
+            except Exception:
+                try:
+                    ctypes.windll.user32.SetProcessDPIAware()
+                except Exception:
+                    pass
+
         self.root = tk.Tk()
         self.root.title("ScreenCloak Controller")
         self.root.overrideredirect(True)
         self.root.wm_attributes("-topmost", True)
-
-        # Place Dock near top center of screen
-        screen_w = self.root.winfo_screenwidth()
-        dock_w = 560
-        dock_h = 42
-        dock_x = (screen_w - dock_w) // 2
-        dock_y = 24
-        self.root.geometry(f"{dock_w}x{dock_h}+{dock_x}+{dock_y}")
 
         self.masks: List[PrivacyMask] = []
         self.mask_counter = 1
@@ -37,11 +39,19 @@ class ScreenCloakApp:
         self.current_alpha = 1.0  # 1.0 (100%), 0.85 (85%), 0.70 (70%)
 
         self.presets = load_presets()
-
         self._drag_data = {"x": 0, "y": 0}
 
         self._build_dock_ui()
         self._init_hotkeys()
+
+        # Dynamic Auto-Fit Dock Geometry based on DPI and font metrics
+        self.root.update_idletasks()
+        needed_w = self.dock_frame.winfo_reqwidth() + 24
+        needed_h = max(42, self.dock_frame.winfo_reqheight() + 8)
+        screen_w = self.root.winfo_screenwidth()
+        dock_x = (screen_w - needed_w) // 2
+        dock_y = 20
+        self.root.geometry(f"{needed_w}x{needed_h}+{dock_x}+{dock_y}")
 
         # Create one initial default privacy bar
         self.root.after(100, lambda: self.add_mask(dock_x - 50, dock_y + 120, 380, 65, "PASSWORD / SECRET"))
