@@ -96,12 +96,12 @@ class ScreenCloakApp:
         )
         self.draw_btn.pack(side=tk.LEFT, padx=3)
 
-        # Style Cycle Button
+        # Style Menu Button (Dropdown Popup)
         self.style_btn = tk.Button(
-            self.dock_frame, text="🎨 样式", bg="#27272a", fg=fg_text,
+            self.dock_frame, text="🎨 样式 ▾", bg="#27272a", fg=fg_text,
             activebackground="#3f3f46", activeforeground=fg_text,
             font=("Segoe UI", 8), relief=tk.FLAT, padx=6, pady=1,
-            command=self.cycle_style
+            command=self.show_style_menu
         )
         self.style_btn.pack(side=tk.LEFT, padx=3)
 
@@ -181,10 +181,36 @@ class ScreenCloakApp:
         for m in self.masks:
             m.set_locked(self.is_locked)
 
-    def cycle_style(self):
-        styles = ["redacted", "warning", "pure_black"]
-        idx = styles.index(self.current_style)
-        self.current_style = styles[(idx + 1) % len(styles)]
+    def show_style_menu(self):
+        """
+        Pops up an explicit style selection dropdown menu.
+        """
+        menu = tk.Menu(
+            self.root, tearoff=0, bg="#18181b", fg="#f4f4f5",
+            activebackground="#3b82f6", activeforeground="#ffffff",
+            font=("Segoe UI", 9)
+        )
+        styles = [
+            ("redacted", "🔒 绝密黑金 (Redacted Obsidian)"),
+            ("warning", "⚠️ 高危警示 (Warning Classified)"),
+            ("pure_black", "⬛ 纯黑哑光 (Pure Blackout)"),
+            ("frosted", "🔲 磨砂深灰 (Frosted Charcoal)")
+        ]
+        for style_key, label in styles:
+            is_checked = (self.current_style == style_key)
+            prefix = "✓ " if is_checked else "   "
+            menu.add_command(
+                label=f"{prefix}{label}",
+                command=lambda s=style_key: self.select_style(s)
+            )
+
+        # Popup just below the Style button
+        bx = self.style_btn.winfo_rootx()
+        by = self.style_btn.winfo_rooty() + self.style_btn.winfo_height() + 4
+        menu.tk_popup(bx, by)
+
+    def select_style(self, style_name: str):
+        self.current_style = style_name
         for m in self.masks:
             m.set_style(self.current_style)
 

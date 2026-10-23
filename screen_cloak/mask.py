@@ -96,8 +96,25 @@ class PrivacyMask:
 
         if not self.is_locked:
             # === EDIT MODE ===
+            # Accent color matches selected style
+            if self.style == "warning":
+                border_color = "#eab308"
+                badge_icon = "⚠️"
+                accent_fg = "#fde047"
+            elif self.style == "pure_black":
+                border_color = "#71717a"
+                badge_icon = "⬛"
+                accent_fg = "#e4e4e7"
+            elif self.style == "frosted":
+                border_color = "#06b6d4"
+                badge_icon = "🔲"
+                accent_fg = "#67e8f9"
+            else:  # redacted
+                border_color = "#3b82f6"
+                badge_icon = "🔒"
+                accent_fg = "#93c5fd"
+
             bg_color = "#18181b"
-            border_color = "#3b82f6"
             self.canvas.configure(bg=bg_color)
 
             # Update border
@@ -105,23 +122,23 @@ class PrivacyMask:
             self.canvas.itemconfigure(self.bg_rect_id, fill=bg_color, outline=border_color, width=2, dash=(6, 4))
 
             # Header Badge
-            badge_text = f"🛡️ 防窥条 #{self.mask_id} [{self.label_text}]"
+            badge_text = f"{badge_icon} 防窥条 #{self.mask_id} [{self.label_text}] • {self.style.upper()}"
             self.canvas.coords(self.header_text_id, 10, 16)
-            self.canvas.itemconfigure(self.header_text_id, text=badge_text, fill="#93c5fd", state="normal")
+            self.canvas.itemconfigure(self.header_text_id, text=badge_text, fill=accent_fg, state="normal")
 
             # Center Hint
             self.canvas.coords(self.center_text_id, w // 2, h // 2 + 5)
             self.canvas.itemconfigure(
                 self.center_text_id,
                 text="[ 拖动移动 | 右下角⤡调大小 | 按 Ctrl+Alt+C 锁定穿透 ]",
-                fill="#64748b", font=("Segoe UI", 9), state="normal"
+                fill="#71717a", font=("Segoe UI", 9), state="normal"
             )
 
             # Show Interactive Widgets
             self.close_btn.configure(bg=bg_color)
             self.close_btn.place(relx=1.0, rely=0.0, anchor="ne", width=24, height=24)
 
-            self.grip.configure(bg=bg_color)
+            self.grip.configure(bg=bg_color, fg=border_color)
             self.grip.place(relx=1.0, rely=1.0, anchor="se", width=24, height=24)
 
         else:
@@ -139,6 +156,11 @@ class PrivacyMask:
                 border_color = "#000000"
                 text_color = "#333333"
                 banner_text = f"[ REDACTED ]"
+            elif self.style == "frosted":
+                bg_color = "#1e1e24"
+                border_color = "#3f3f46"
+                text_color = "#67e8f9"
+                banner_text = f"🔲 [ FROSTED CENSOR • {self.label_text.upper()} ]"
             else:  # "redacted"
                 bg_color = "#09090b"
                 border_color = "#27272a"
