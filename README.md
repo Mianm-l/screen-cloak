@@ -5,6 +5,12 @@
 **专为开发者与远程会议设计的轻量级屏幕共享代码防窥与打码滤镜。**  
 *A lightweight, click-through screen privacy filter & censor bar for live screen sharing and recording.*
 
+<p align="center">
+  <a href="https://github.com/Mianm-l/screen-cloak/releases/download/v0.1.0/ScreenCloak.exe">
+    <img src="https://img.shields.io/badge/⬇️_Direct_Download-ScreenCloak.exe_(v0.1.0)-2563eb?style=for-the-badge&logo=windows" alt="Download EXE">
+  </a>
+</p>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-lightgrey.svg)](https://microsoft.com)
 [![Python: 3.8+](https://img.shields.io/badge/Python-3.8%2B-brightgreen.svg)](https://www.python.org/)
