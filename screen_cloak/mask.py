@@ -1,5 +1,5 @@
 """
-Privacy Mask Window implementation with native click-through support.
+Privacy Mask Window implementation with native click-through support and smooth resizing.
 """
 
 import tkinter as tk
@@ -33,12 +33,8 @@ class PrivacyMask:
         self.style = style
         self.on_close = on_close
 
-        self.is_locked = False  # False: Edit Mode (movable/resizable), True: Locked (Click-through)
+        self.is_locked = False
         self.is_visible = True
-
-        # Window Tracking / Anchoring
-        self.target_hwnd: Optional[int] = None
-        self.anchor_offset: Optional[tuple] = None  # (rel_x, rel_y, rel_w, rel_h)
 
         # Create TopLevel window
         self.win = tk.Toplevel(master)
@@ -46,7 +42,7 @@ class PrivacyMask:
         self.win.wm_attributes("-topmost", True)
         self.win.geometry(f"{width}x{height}+{x}+{y}")
 
-        # Drag & Resize state
+        # Drag & Resize tracking
         self._drag_data = {"x": 0, "y": 0}
         self._resize_data = {"x": 0, "y": 0, "w": width, "h": height}
 
@@ -60,69 +56,79 @@ class PrivacyMask:
             self.hwnd = self.win.winfo_id()
 
     def _build_ui(self):
-        # Master Canvas for drawing border, background, and badge
+        # Master Canvas for graphics
         self.canvas = tk.Canvas(self.win, highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
-        # Bind mouse events on canvas for moving
+        # Canvas items
+        self.bg_rect_id = self.canvas.create_rectangle(0, 0, 0, 0, width=2)
+        self.header_text_id = self.canvas.create_text(10, 16, anchor="w", font=("Consolas", 10, "bold"))
+        self.center_text_id = self.canvas.create_text(0, 0, anchor="center", font=("Consolas", 10, "bold"))
+
+        # Bind mouse drag on canvas for moving window
         self.canvas.bind("<Button-1>", self._on_drag_start)
         self.canvas.bind("<B1-Motion>", self._on_drag_motion)
 
-        # Controls overlay (Close button, resize handle, mode badge)
+        # Dedicated Close Button Widget (Top-Right)
+        self.close_btn = tk.Label(
+            self.win, text="✕", fg="#ef4444", bg="#18181b",
+            font=("Segoe UI", 10, "bold"), cursor="hand2"
+        )
+        self.close_btn.bind("<Button-1>", lambda e: self._on_close_clicked())
+
+        # Dedicated Resize Grip Widget (Bottom-Right, 24x24 px with resize cursor)
+        self.grip = tk.Label(
+            self.win, text="⤡", fg="#3b82f6", bg="#18181b",
+            font=("Segoe UI", 12, "bold"), cursor="size_nw_se"
+        )
+        self.grip.bind("<Button-1>", self._on_resize_start)
+        self.grip.bind("<B1-Motion>", self._on_resize_motion)
+        self.grip.bind("<ButtonRelease-1>", self._on_resize_end)
+
+        # Listen to window configure event for smooth redraw
+        self.win.bind("<Configure>", self._on_window_configure)
+
         self._render_content()
 
     def _render_content(self):
-        self.canvas.delete("all")
-        w = self.win.winfo_width()
-        h = self.win.winfo_height()
-        if w < 10: w = 360
-        if h < 10: h = 70
+        w = max(180, self.win.winfo_width())
+        h = max(40, self.win.winfo_height())
 
         if not self.is_locked:
             # === EDIT MODE ===
-            # Cyber dark border with dashed active outline
             bg_color = "#18181b"
-            border_color = "#3b82f6"  # Blue accent
+            border_color = "#3b82f6"
             self.canvas.configure(bg=bg_color)
 
-            # Draw outer rectangle border
-            self.canvas.create_rectangle(
-                1, 1, w - 2, h - 2,
-                outline=border_color, width=2, dash=(6, 4)
-            )
+            # Update border
+            self.canvas.coords(self.bg_rect_id, 1, 1, w - 2, h - 2)
+            self.canvas.itemconfigure(self.bg_rect_id, fill=bg_color, outline=border_color, width=2, dash=(6, 4))
 
             # Header Badge
             badge_text = f"🛡️ 防窥条 #{self.mask_id} [{self.label_text}]"
-            self.canvas.create_text(
-                10, 16, text=badge_text,
-                anchor="w", fill="#93c5fd",
-                font=("Consolas", 10, "bold")
-            )
+            self.canvas.coords(self.header_text_id, 10, 16)
+            self.canvas.itemconfigure(self.header_text_id, text=badge_text, fill="#93c5fd", state="normal")
 
             # Center Hint
-            self.canvas.create_text(
-                w // 2, h // 2 + 5,
-                text="[ 拖动移动 | 右下角调整大小 | 按 Ctrl+Alt+C 锁定穿透 ]",
-                fill="#64748b", font=("Segoe UI", 9)
+            self.canvas.coords(self.center_text_id, w // 2, h // 2 + 5)
+            self.canvas.itemconfigure(
+                self.center_text_id,
+                text="[ 拖动移动 | 右下角⤡调大小 | 按 Ctrl+Alt+C 锁定穿透 ]",
+                fill="#64748b", font=("Segoe UI", 9), state="normal"
             )
 
-            # Close button (top right)
-            self.close_btn_id = self.canvas.create_text(
-                w - 15, 15, text="✕",
-                fill="#ef4444", font=("Segoe UI", 11, "bold")
-            )
-            self.canvas.tag_bind(self.close_btn_id, "<Button-1>", self._on_close_clicked)
+            # Show Interactive Widgets
+            self.close_btn.configure(bg=bg_color)
+            self.close_btn.place(relx=1.0, rely=0.0, anchor="ne", width=24, height=24)
 
-            # Resize grip (bottom right)
-            self.grip_id = self.canvas.create_text(
-                w - 10, h - 10, text="⤡",
-                fill="#3b82f6", font=("Segoe UI", 12, "bold")
-            )
-            self.canvas.tag_bind(self.grip_id, "<Button-1>", self._on_resize_start)
-            self.canvas.tag_bind(self.grip_id, "<B1-Motion>", self._on_resize_motion)
+            self.grip.configure(bg=bg_color)
+            self.grip.place(relx=1.0, rely=1.0, anchor="se", width=24, height=24)
 
         else:
             # === LOCKED MODE (CENSOR / REDACTED BAR) ===
+            self.close_btn.place_forget()
+            self.grip.place_forget()
+
             if self.style == "warning":
                 bg_color = "#0a0a0c"
                 border_color = "#eab308"
@@ -133,30 +139,37 @@ class PrivacyMask:
                 border_color = "#000000"
                 text_color = "#333333"
                 banner_text = f"[ REDACTED ]"
-            else:  # "redacted" (default dark obsidian with gold/cyber accent)
+            else:  # "redacted"
                 bg_color = "#09090b"
                 border_color = "#27272a"
-                text_color = "#d4af37"  # Metallic gold
+                text_color = "#d4af37"
                 banner_text = f"🔒 [ SENSITIVE DATA REDACTED • {self.label_text.upper()} ]"
 
             self.canvas.configure(bg=bg_color)
-            self.canvas.create_rectangle(
-                0, 0, w, h,
-                fill=bg_color, outline=border_color, width=1
+            self.canvas.coords(self.bg_rect_id, 0, 0, w, h)
+            self.canvas.itemconfigure(self.bg_rect_id, fill=bg_color, outline=border_color, width=1, dash=())
+
+            self.canvas.itemconfigure(self.header_text_id, state="hidden")
+
+            self.canvas.coords(self.center_text_id, w // 2, h // 2)
+            self.canvas.itemconfigure(
+                self.center_text_id,
+                text=banner_text, fill=text_color,
+                font=("Consolas", 10, "bold"), state="normal"
             )
 
-            # Center Banner Text
-            self.canvas.create_text(
-                w // 2, h // 2,
-                text=banner_text,
-                fill=text_color,
-                font=("Consolas", 10, "bold")
-            )
+    def _on_window_configure(self, event):
+        if event.widget == self.win:
+            w = max(180, self.win.winfo_width())
+            h = max(40, self.win.winfo_height())
+            if not self.is_locked:
+                self.canvas.coords(self.bg_rect_id, 1, 1, w - 2, h - 2)
+                self.canvas.coords(self.center_text_id, w // 2, h // 2 + 5)
+            else:
+                self.canvas.coords(self.bg_rect_id, 0, 0, w, h)
+                self.canvas.coords(self.center_text_id, w // 2, h // 2)
 
     def set_locked(self, locked: bool):
-        """
-        Switches between Edit Mode (interactive) and Locked Mode (click-through).
-        """
         self.is_locked = locked
         self._render_content()
 
@@ -194,23 +207,21 @@ class PrivacyMask:
             "style": self.style
         }
 
-    # Drag Handlers
+    # Drag Handlers (Window Move)
     def _on_drag_start(self, event):
         if self.is_locked:
             return
-        self._drag_data["x"] = event.x
-        self._drag_data["y"] = event.y
+        self._drag_data["x"] = event.x_root - self.win.winfo_x()
+        self._drag_data["y"] = event.y_root - self.win.winfo_y()
 
     def _on_drag_motion(self, event):
         if self.is_locked:
             return
-        dx = event.x - self._drag_data["x"]
-        dy = event.y - self._drag_data["y"]
-        new_x = self.win.winfo_x() + dx
-        new_y = self.win.winfo_y() + dy
+        new_x = event.x_root - self._drag_data["x"]
+        new_y = event.y_root - self._drag_data["y"]
         self.win.geometry(f"+{new_x}+{new_y}")
 
-    # Resize Handlers
+    # Resize Handlers (Smooth Corner Drag)
     def _on_resize_start(self, event):
         if self.is_locked:
             return
@@ -218,6 +229,7 @@ class PrivacyMask:
         self._resize_data["y"] = event.y_root
         self._resize_data["w"] = self.win.winfo_width()
         self._resize_data["h"] = self.win.winfo_height()
+        return "break"
 
     def _on_resize_motion(self, event):
         if self.is_locked:
@@ -227,9 +239,13 @@ class PrivacyMask:
         new_w = max(180, self._resize_data["w"] + dw)
         new_h = max(40, self._resize_data["h"] + dh)
         self.win.geometry(f"{new_w}x{new_h}")
-        self._render_content()
+        return "break"
 
-    def _on_close_clicked(self, event):
+    def _on_resize_end(self, event):
+        self._render_content()
+        return "break"
+
+    def _on_close_clicked(self):
         self.destroy()
         if self.on_close:
             self.on_close(self)
