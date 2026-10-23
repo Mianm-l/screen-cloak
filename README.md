@@ -21,6 +21,10 @@
 
 </div>
 
+<p align="center">
+  <img src="docs/images/preview.png" alt="ScreenCloak Live Preview" width="95%">
+</p>
+
 ---
 
 ## 💡 为什么需要 ScreenCloak？
